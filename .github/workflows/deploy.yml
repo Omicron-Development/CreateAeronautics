@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
           clean: true
@@ -32,6 +32,8 @@ jobs:
 
       - name: Prepare files
         run: |
+          set -euo pipefail
+
           mkdir -p /tmp/client-files/mods
           mkdir -p /tmp/client-files/config
           mkdir -p /tmp/client-files/kubejs
@@ -39,101 +41,164 @@ jobs:
           mkdir -p /tmp/server-files/config
           mkdir -p /tmp/server-files/kubejs
 
-          rsync -a ./src/core/mods/client/ /tmp/client-files/mods/ || true
-          rsync -a ./src/core/mods/common/ /tmp/client-files/mods/ || true
-          rsync -a ./src/core/mods/server/ /tmp/server-files/mods/ || true
-          rsync -a ./src/core/mods/common/ /tmp/server-files/mods/ || true
+          rsync -a --info=progress2 ./src/core/mods/client/ /tmp/client-files/mods/ || true
+          rsync -a --info=progress2 ./src/core/mods/common/ /tmp/client-files/mods/ || true
+          rsync -a --info=progress2 ./src/core/mods/server/ /tmp/server-files/mods/ || true
+          rsync -a --info=progress2 ./src/core/mods/common/ /tmp/server-files/mods/ || true
 
-          rsync -a ./src/core/config/client/ /tmp/client-files/config/ || true
-          rsync -a ./src/core/config/common/ /tmp/client-files/config/ || true
-          rsync -a ./src/core/config/server/ /tmp/server-files/config/ || true
-          rsync -a ./src/core/config/common/ /tmp/server-files/config/ || true
+          rsync -a --info=progress2 ./src/core/config/client/ /tmp/client-files/config/ || true
+          rsync -a --info=progress2 ./src/core/config/common/ /tmp/client-files/config/ || true
+          rsync -a --info=progress2 ./src/core/config/server/ /tmp/server-files/config/ || true
+          rsync -a --info=progress2 ./src/core/config/common/ /tmp/server-files/config/ || true
 
-          rsync -a ./src/core/kubejs/client/ /tmp/client-files/kubejs/ || true
-          rsync -a ./src/core/kubejs/common/ /tmp/client-files/kubejs/ || true
-          rsync -a ./src/core/kubejs/server/ /tmp/server-files/kubejs/ || true
-          rsync -a ./src/core/kubejs/common/ /tmp/server-files/kubejs/ || true
+          rsync -a --info=progress2 ./src/core/kubejs/client/ /tmp/client-files/kubejs/ || true
+          rsync -a --info=progress2 ./src/core/kubejs/common/ /tmp/client-files/kubejs/ || true
+          rsync -a --info=progress2 ./src/core/kubejs/server/ /tmp/server-files/kubejs/ || true
+          rsync -a --info=progress2 ./src/core/kubejs/common/ /tmp/server-files/kubejs/ || true
+
+          echo "Client files:"
+          find /tmp/client-files -type f | wc -l
+          du -sh /tmp/client-files
+
+          echo "Server files:"
+          find /tmp/server-files -type f | wc -l
+          du -sh /tmp/server-files
 
       - name: Upload server files via SFTP
         env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_PORT: ${{ secrets.SERVER_PORT }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
-          SERVER_PROD_FOLDER: ${{ secrets.SERVER_PROD_FOLDER }}
+          SFTP_HOST: ${{ secrets.SERVER_HOST || secrets.IP }}
+          SFTP_PORT: ${{ secrets.SERVER_PORT || secrets.PORT }}
+          SFTP_USER: ${{ secrets.SERVER_USER || secrets.USER }}
+          SFTP_PASS: ${{ secrets.SERVER_PASSWORD || secrets.PASS }}
+          SFTP_ROOT: ${{ secrets.SERVER_PROD_FOLDER || '/' }}
         run: |
           set -euo pipefail
 
-          SERVER_PORT="${SERVER_PORT:-22}"
-          SERVER_HOST="${SERVER_HOST#sftp://}"
-          SERVER_HOST="${SERVER_HOST#ssh://}"
-          SERVER_HOST="${SERVER_HOST%%/*}"
-          SERVER_PROD_FOLDER="${SERVER_PROD_FOLDER%/}"
+          SFTP_PORT="${SFTP_PORT:-22}"
+          SFTP_HOST="${SFTP_HOST#sftp://}"
+          SFTP_HOST="${SFTP_HOST#ssh://}"
+          SFTP_HOST="${SFTP_HOST%%/*}"
+          SFTP_ROOT="${SFTP_ROOT:-/}"
 
-          if [[ -z "${SERVER_USER:-}" && "$SERVER_HOST" == *"@"* ]]; then
-            SERVER_USER="${SERVER_HOST%@*}"
-            SERVER_HOST="${SERVER_HOST#*@}"
+          if [[ "$SFTP_HOST" == *"@"* ]]; then
+            SFTP_USER="${SFTP_HOST%@*}"
+            SFTP_HOST="${SFTP_HOST#*@}"
           fi
 
-          if [[ "$SERVER_HOST" == *"@"* ]]; then
-            SERVER_USER="${SERVER_HOST%@*}"
-            SERVER_HOST="${SERVER_HOST#*@}"
+          if [[ "$SFTP_HOST" == *:* && "$SFTP_HOST" != *:*:* ]]; then
+            SFTP_PORT="${SFTP_HOST##*:}"
+            SFTP_HOST="${SFTP_HOST%:*}"
           fi
 
-          if [[ "$SERVER_HOST" == *:* && "$SERVER_HOST" != *:*:* ]]; then
-            SERVER_PORT="${SERVER_HOST##*:}"
-            SERVER_HOST="${SERVER_HOST%:*}"
-          fi
-
-          if [[ -z "${SERVER_HOST:-}" ]]; then
-            echo "Missing SERVER_HOST"
+          if [[ -z "${SFTP_HOST:-}" ]]; then
+            echo "Missing host"
             exit 1
           fi
 
-          if [[ -z "${SERVER_USER:-}" ]]; then
-            echo "Missing SERVER_USER"
+          if [[ -z "${SFTP_PORT:-}" ]]; then
+            echo "Missing port"
             exit 1
           fi
 
-          if [[ -z "${SERVER_PASSWORD:-}" ]]; then
-            echo "Missing SERVER_PASSWORD"
+          if [[ -z "${SFTP_USER:-}" ]]; then
+            echo "Missing user"
             exit 1
           fi
 
-          if [[ -z "${SERVER_PROD_FOLDER:-}" ]]; then
-            echo "Missing SERVER_PROD_FOLDER"
+          if [[ -z "${SFTP_PASS:-}" ]]; then
+            echo "Missing password"
             exit 1
           fi
 
-          if ! [[ "$SERVER_PORT" =~ ^[0-9]+$ ]]; then
-            echo "Invalid SERVER_PORT"
+          if ! [[ "$SFTP_PORT" =~ ^[0-9]+$ ]]; then
+            echo "Invalid port"
             exit 1
           fi
 
-          if [[ "$SERVER_USER" == *"@"* || "$SERVER_USER" == *"/"* || "$SERVER_USER" == *":"* ]]; then
-            echo "Invalid SERVER_USER"
+          if [[ "$SFTP_USER" == *"@"* || "$SFTP_USER" == *"/"* || "$SFTP_USER" == *":"* ]]; then
+            echo "Invalid user"
             exit 1
           fi
 
-          lftp -u "$SERVER_USER","$SERVER_PASSWORD" -p "$SERVER_PORT" "sftp://$SERVER_HOST" <<EOF
+          if [[ "$SFTP_ROOT" == "/" || "$SFTP_ROOT" == "." ]]; then
+            REMOTE_MODS="mods"
+            REMOTE_CONFIG="config"
+            REMOTE_KUBEJS="kubejs"
+          else
+            SFTP_ROOT="${SFTP_ROOT%/}"
+            REMOTE_MODS="$SFTP_ROOT/mods"
+            REMOTE_CONFIG="$SFTP_ROOT/config"
+            REMOTE_KUBEJS="$SFTP_ROOT/kubejs"
+          fi
+
+          upload_dir() {
+            local name="$1"
+            local src="$2"
+            local dst="$3"
+            local mode="$4"
+
+            echo "::group::Upload $name"
+            echo "Local path: $src"
+            echo "Remote path: $dst"
+            echo "Files:"
+            find "$src" -type f | wc -l
+            echo "Size:"
+            du -sh "$src"
+
+            if [[ "$mode" == "delete" ]]; then
+              timeout 30m lftp -u "$SFTP_USER","$SFTP_PASS" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF &
           set sftp:auto-confirm yes
           set net:max-retries 2
           set net:timeout 30
-          mkdir -p "$SERVER_PROD_FOLDER"
-          mirror -R --delete /tmp/server-files/mods "$SERVER_PROD_FOLDER/mods"
-          mirror -R --delete /tmp/server-files/config "$SERVER_PROD_FOLDER/config"
-          mirror -R --delete /tmp/server-files/kubejs "$SERVER_PROD_FOLDER/kubejs"
+          set net:reconnect-interval-base 5
+          set cmd:fail-exit yes
+          set cmd:show-status yes
+          mirror -R --delete --verbose=3 --parallel=4 "$src" "$dst"
           bye
           EOF
+            else
+              timeout 30m lftp -u "$SFTP_USER","$SFTP_PASS" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF &
+          set sftp:auto-confirm yes
+          set net:max-retries 2
+          set net:timeout 30
+          set net:reconnect-interval-base 5
+          set cmd:fail-exit yes
+          set cmd:show-status yes
+          mirror -R --verbose=3 --parallel=4 "$src" "$dst"
+          bye
+          EOF
+            fi
+
+            local pid=$!
+
+            while kill -0 "$pid" 2>/dev/null; do
+              echo "Uploading $name... $(date -u +%H:%M:%S)"
+              sleep 10
+            done
+
+            wait "$pid"
+            echo "Uploaded $name"
+            echo "::endgroup::"
+          }
+
+          upload_dir "mods" "/tmp/server-files/mods" "$REMOTE_MODS" "delete"
+          upload_dir "config" "/tmp/server-files/config" "$REMOTE_CONFIG" "merge"
+          upload_dir "kubejs" "/tmp/server-files/kubejs" "$REMOTE_KUBEJS" "delete"
 
       - name: Pack client files
         run: |
+          set -euo pipefail
           cd /tmp/client-files
+          echo "Packing client.zip"
+          find . -type f | wc -l
+          du -sh .
           zip -r /tmp/client.zip mods config kubejs
+          echo "Archive size:"
+          du -sh /tmp/client.zip
 
       - name: Create release tag
         id: release_tag
-        run: echo "tag_name=client-main-${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+        run: echo "tag_name=client-main-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release and upload archive
         uses: softprops/action-gh-release@v2
