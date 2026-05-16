@@ -22,13 +22,14 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y lftp zip rsync
+          sudo apt-get install -y sshpass zip rsync
 
       - name: Clean build folders
         run: |
           rm -rf /tmp/client-files
           rm -rf /tmp/server-files
           rm -f /tmp/client.zip
+          rm -f /tmp/sftp-batch
 
       - name: Prepare files
         run: |
@@ -62,16 +63,22 @@ jobs:
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
           SERVER_PROD_FOLDER: ${{ secrets.SERVER_PROD_FOLDER }}
         run: |
-          lftp -u "$SERVER_USER","$SERVER_PASSWORD" -p "$SERVER_PORT" "sftp://$SERVER_HOST" <<EOF
-          set sftp:auto-confirm yes
-          set net:max-retries 2
-          set net:timeout 30
-          mkdir -p $SERVER_PROD_FOLDER
-          mirror -R --delete /tmp/server-files/mods $SERVER_PROD_FOLDER/mods
-          mirror -R --delete /tmp/server-files/config $SERVER_PROD_FOLDER/config
-          mirror -R --delete /tmp/server-files/kubejs $SERVER_PROD_FOLDER/kubejs
+          cat > /tmp/sftp-batch <<EOF
+          -mkdir $SERVER_PROD_FOLDER
+          -mkdir $SERVER_PROD_FOLDER/mods
+          -mkdir $SERVER_PROD_FOLDER/config
+          -mkdir $SERVER_PROD_FOLDER/kubejs
+          put -r /tmp/server-files/mods/* $SERVER_PROD_FOLDER/mods/
+          put -r /tmp/server-files/config/* $SERVER_PROD_FOLDER/config/
+          put -r /tmp/server-files/kubejs/* $SERVER_PROD_FOLDER/kubejs/
           bye
           EOF
+
+          sshpass -p "$SERVER_PASSWORD" sftp \
+            -o StrictHostKeyChecking=no \
+            -P "$SERVER_PORT" \
+            -b /tmp/sftp-batch \
+            "$SERVER_USER@$SERVER_HOST"
 
       - name: Pack client files
         run: |
