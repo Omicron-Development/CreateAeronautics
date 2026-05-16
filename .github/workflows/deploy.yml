@@ -62,15 +62,17 @@ jobs:
           SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
           SERVER_PROD_FOLDER: ${{ secrets.SERVER_PROD_FOLDER }}
         run: |
+          set -euo pipefail
+
           SERVER_PORT="${SERVER_PORT:-22}"
           SERVER_HOST="${SERVER_HOST#sftp://}"
           SERVER_HOST="${SERVER_HOST#ssh://}"
           SERVER_HOST="${SERVER_HOST%%/*}"
           SERVER_PROD_FOLDER="${SERVER_PROD_FOLDER%/}"
 
-          if [[ "$SERVER_USER" == *"@"* ]]; then
-            SERVER_HOST="${SERVER_USER#*@}"
-            SERVER_USER="${SERVER_USER%@*}"
+          if [[ -z "${SERVER_USER:-}" && "$SERVER_HOST" == *"@"* ]]; then
+            SERVER_USER="${SERVER_HOST%@*}"
+            SERVER_HOST="${SERVER_HOST#*@}"
           fi
 
           if [[ "$SERVER_HOST" == *"@"* ]]; then
@@ -78,8 +80,38 @@ jobs:
             SERVER_HOST="${SERVER_HOST#*@}"
           fi
 
+          if [[ "$SERVER_HOST" == *:* && "$SERVER_HOST" != *:*:* ]]; then
+            SERVER_PORT="${SERVER_HOST##*:}"
+            SERVER_HOST="${SERVER_HOST%:*}"
+          fi
+
+          if [[ -z "${SERVER_HOST:-}" ]]; then
+            echo "Missing SERVER_HOST"
+            exit 1
+          fi
+
+          if [[ -z "${SERVER_USER:-}" ]]; then
+            echo "Missing SERVER_USER"
+            exit 1
+          fi
+
+          if [[ -z "${SERVER_PASSWORD:-}" ]]; then
+            echo "Missing SERVER_PASSWORD"
+            exit 1
+          fi
+
+          if [[ -z "${SERVER_PROD_FOLDER:-}" ]]; then
+            echo "Missing SERVER_PROD_FOLDER"
+            exit 1
+          fi
+
           if ! [[ "$SERVER_PORT" =~ ^[0-9]+$ ]]; then
             echo "Invalid SERVER_PORT"
+            exit 1
+          fi
+
+          if [[ "$SERVER_USER" == *"@"* || "$SERVER_USER" == *"/"* || "$SERVER_USER" == *":"* ]]; then
+            echo "Invalid SERVER_USER"
             exit 1
           fi
 
