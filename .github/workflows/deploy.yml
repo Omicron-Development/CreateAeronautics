@@ -1,0 +1,93 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+          clean: true
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp zip rsync
+
+      - name: Clean build folders
+        run: |
+          rm -rf /tmp/client-files
+          rm -rf /tmp/server-files
+          rm -f /tmp/client.zip
+
+      - name: Prepare files
+        run: |
+          mkdir -p /tmp/client-files/mods
+          mkdir -p /tmp/client-files/config
+          mkdir -p /tmp/client-files/kubejs
+          mkdir -p /tmp/server-files/mods
+          mkdir -p /tmp/server-files/config
+          mkdir -p /tmp/server-files/kubejs
+
+          rsync -a ./src/core/mods/client/ /tmp/client-files/mods/ || true
+          rsync -a ./src/core/mods/common/ /tmp/client-files/mods/ || true
+          rsync -a ./src/core/mods/server/ /tmp/server-files/mods/ || true
+          rsync -a ./src/core/mods/common/ /tmp/server-files/mods/ || true
+
+          rsync -a ./src/core/config/client/ /tmp/client-files/config/ || true
+          rsync -a ./src/core/config/common/ /tmp/client-files/config/ || true
+          rsync -a ./src/core/config/server/ /tmp/server-files/config/ || true
+          rsync -a ./src/core/config/common/ /tmp/server-files/config/ || true
+
+          rsync -a ./src/core/kubejs/client/ /tmp/client-files/kubejs/ || true
+          rsync -a ./src/core/kubejs/common/ /tmp/client-files/kubejs/ || true
+          rsync -a ./src/core/kubejs/server/ /tmp/server-files/kubejs/ || true
+          rsync -a ./src/core/kubejs/common/ /tmp/server-files/kubejs/ || true
+
+      - name: Upload server files via SFTP
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
+          SERVER_PROD_FOLDER: ${{ secrets.SERVER_PROD_FOLDER }}
+        run: |
+          lftp -u "$SERVER_USER","$SERVER_PASSWORD" -p "$SERVER_PORT" "sftp://$SERVER_HOST" <<EOF
+          set sftp:auto-confirm yes
+          set net:max-retries 2
+          set net:timeout 30
+          mkdir -p $SERVER_PROD_FOLDER
+          mirror -R --delete /tmp/server-files/mods $SERVER_PROD_FOLDER/mods
+          mirror -R --delete /tmp/server-files/config $SERVER_PROD_FOLDER/config
+          mirror -R --delete /tmp/server-files/kubejs $SERVER_PROD_FOLDER/kubejs
+          bye
+          EOF
+
+      - name: Pack client files
+        run: |
+          cd /tmp/client-files
+          zip -r /tmp/client.zip mods config kubejs
+
+      - name: Create release tag
+        id: release_tag
+        run: echo "tag_name=client-main-${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release and upload archive
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.tag_name }}
+          name: Client Main ${{ steps.release_tag.outputs.tag_name }}
+          files: /tmp/client.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
