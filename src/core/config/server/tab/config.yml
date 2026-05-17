@@ -1,0 +1,185 @@
+header-footer:
+  enabled: true
+  designs:
+    default:
+      header:
+        - "<#5FE7FF>&m                                                </#FFFFFF>"
+        - ""
+        - "<#5FE7FF>&lCREATE AERONAUTICS</#F6D365>"
+        - ""
+        - "&8▸ &fИгрок: <#7CF7D4>%player%"
+        - "&8▸ &fОнлайн: <#F6D365>%online% &8| &fПинг: <#7CF7D4>%ping%мс"
+        - ""
+      footer:
+        - ""
+        - "&8▸ &fДата: <#FFD166>%date% &8| &fВремя: <#7CF7D4>%time%"
+        - "&8▸ &7Приятной игры на &fCreate Aeronautics"
+        - ""
+        - "<#FFFFFF>&m                                                </#5FE7FF>"
+
+tablist-name-formatting:
+  enabled: true
+  disable-condition: "%world%=disabledworld"
+
+scoreboard-teams:
+  enabled: true
+  enable-collision: true
+  invisible-nametags: false
+  sorting-types:
+    - "GROUPS:owner,admin,moderator,mod,helper,builder,vip,default"
+    - "PLACEHOLDER_A_TO_Z:%player%"
+  case-sensitive-sorting: false
+  can-see-friendly-invisibles: false
+  disable-condition: "%world%=disabledworld"
+
+playerlist-objective:
+  enabled: true
+  value: "%ping%"
+  fancy-value: ""
+  title: "Create Aeronautics"
+  render-type: INTEGER
+  disable-condition: "%world%=disabledworld"
+
+belowname-objective:
+  enabled: false
+  value: "%health%"
+  fancy-value: "&c%health%"
+  fancy-value-default: "NPC"
+  title: "&cЗдоровье"
+  disable-condition: "%world%=disabledworld"
+
+prevent-spectator-effect:
+  enabled: false
+
+bossbar:
+  enabled: false
+  toggle-command: /bossbar
+  remember-toggle-choice: false
+  hidden-by-default: true
+  bars: {}
+
+scoreboard:
+  enabled: false
+  toggle-command: /sb
+  remember-toggle-choice: false
+  hidden-by-default: true
+  delay-on-join-milliseconds: 0
+  scoreboards: {}
+
+layout:
+  enabled: false
+  direction: COLUMNS
+  default-skin: mineskin:37e93c8e12cd426cb28fce31969e0674
+  enable-remaining-players-text: true
+  remaining-players-text: "... и ещё %s игроков"
+  empty-slot-ping-value: 1000
+  layouts: {}
+
+ping-spoof:
+  enabled: false
+  value: 0
+
+global-playerlist:
+  enabled: false
+  display-others-as-spectators: false
+  display-vanished-players-as-spectators: true
+  isolate-unlisted-servers: false
+  update-latency: false
+  spy-servers: []
+  server-groups: {}
+
+placeholders:
+  date-format: "dd.MM.yyyy"
+  time-format: "HH:mm:ss"
+  time-offset: 0
+  register-tab-expansion: false
+
+placeholder-output-replacements:
+  "%essentials_vanished%":
+    "yes": "&8| &7Скрыт"
+    "no": ""
+
+conditions:
+  nick:
+    conditions:
+      - "%player%=%essentials_nickname%"
+    true: "%player%"
+    false: "~%essentials_nickname%"
+
+placeholder-refresh-intervals:
+  default-refresh-interval: 500
+  "%luckperms-prefix%": 500
+  "%luckperms-suffix%": 500
+  "%luckperms-prefixes%": 500
+  "%luckperms-suffixes%": 500
+  "%vault_prefix%": 500
+  "%vault_suffix%": 500
+  "%server_uptime%": 1000
+  "%server_tps_1_colored%": 1000
+  "%server_unique_joins%": 5000
+  "%player_health%": 200
+  "%player_ping%": 1000
+  "%rel_factionsuuid_relation_color%": 1000
+
+assign-groups-by-permissions: false
+
+primary-group-finding-list:
+  - owner
+  - admin
+  - moderator
+  - mod
+  - helper
+  - builder
+  - vip
+  - default
+
+permission-refresh-interval: 500
+
+debug: false
+
+mysql:
+  enabled: false
+  host: 127.0.0.1
+  port: 3306
+  database: tab
+  username: user
+  password: password
+  useSSL: true
+
+proxy-support:
+  enabled: true
+  channel-name-suffix: "TAB"
+  type: PLUGIN
+  plugin:
+    name: RedisBungee
+  redis:
+    url: "redis://:password@localhost:6379/0"
+  rabbitmq:
+    exchange: "plugin"
+    url: "amqp://guest:guest@localhost:5672/%2F"
+
+components:
+  minimessage-support: true
+  disable-shadow-for-heads: true
+
+config-version: 5
+
+per-world-playerlist:
+  enabled: false
+  allow-bypass-permission: false
+  ignore-effect-in-worlds:
+    - ignoredworld
+    - build
+  shared-playerlist-world-groups:
+    lobby:
+      - lobby1
+      - lobby2
+    minigames:
+      - paintball
+      - bedwars
+
+compensate-for-packetevents-bug: false
+
+use-bukkit-permissions-manager: false
+
+use-online-uuid-in-tablist: true
