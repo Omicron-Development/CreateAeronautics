@@ -8,23 +8,82 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
 jobs:
   build_and_deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 2
           clean: true
 
-      - name: Install tools
+      - name: Detect changes
+        id: changes
         run: |
-          sudo apt-get update
-          sudo apt-get install -y lftp zip rsync
+          set -euo pipefail
+
+          CLIENT_CHANGED=false
+          SERVER_CHANGED=false
+
+          if ! git rev-parse HEAD^ >/dev/null 2>&1; then
+            CLIENT_CHANGED=true
+            SERVER_CHANGED=true
+          else
+            CHANGED="$(git diff --name-only HEAD^ HEAD || true)"
+
+            if echo "$CHANGED" | grep -Eq '^(\.github/workflows/|src/client/|src/core/(mods|config|kubejs)/(client|common)/)'; then
+              CLIENT_CHANGED=true
+            fi
+
+            if echo "$CHANGED" | grep -Eq '^(\.github/workflows/|src/core/(mods|config|kubejs)/(server|common)/)'; then
+              SERVER_CHANGED=true
+            fi
+          fi
+
+          ANY_CHANGED=false
+          if [[ "$CLIENT_CHANGED" == "true" || "$SERVER_CHANGED" == "true" ]]; then
+            ANY_CHANGED=true
+          fi
+
+          echo "client=$CLIENT_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "server=$SERVER_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "any=$ANY_CHANGED" >> "$GITHUB_OUTPUT"
+
+      - name: Install tools
+        if: steps.changes.outputs.any == 'true'
+        env:
+          CLIENT_CHANGED: ${{ steps.changes.outputs.client }}
+          SERVER_CHANGED: ${{ steps.changes.outputs.server }}
+        run: |
+          set -euo pipefail
+
+          PACKAGES=()
+
+          if ! command -v rsync >/dev/null 2>&1; then
+            PACKAGES+=(rsync)
+          fi
+
+          if [[ "$CLIENT_CHANGED" == "true" ]] && ! command -v zip >/dev/null 2>&1; then
+            PACKAGES+=(zip)
+          fi
+
+          if [[ "$SERVER_CHANGED" == "true" ]] && ! command -v lftp >/dev/null 2>&1; then
+            PACKAGES+=(lftp)
+          fi
+
+          if (( ${#PACKAGES[@]} > 0 )); then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends "${PACKAGES[@]}"
+          fi
 
       - name: Clean build folders
+        if: steps.changes.outputs.any == 'true'
         run: |
           rm -rf /tmp/client-files
           rm -rf /tmp/server-files
@@ -32,51 +91,56 @@ jobs:
           rm -f /tmp/profile.json
 
       - name: Prepare files
+        if: steps.changes.outputs.any == 'true'
+        env:
+          CLIENT_CHANGED: ${{ steps.changes.outputs.client }}
+          SERVER_CHANGED: ${{ steps.changes.outputs.server }}
         run: |
           set -euo pipefail
 
-          mkdir -p /tmp/client-files/mods
-          mkdir -p /tmp/client-files/config
-          mkdir -p /tmp/client-files/kubejs
-          mkdir -p /tmp/server-files/mods
-          mkdir -p /tmp/server-files/config
-          mkdir -p /tmp/server-files/kubejs
+          if [[ "$CLIENT_CHANGED" == "true" ]]; then
+            mkdir -p /tmp/client-files/mods
+            mkdir -p /tmp/client-files/config
+            mkdir -p /tmp/client-files/kubejs
 
-          rsync -a --info=progress2 ./src/core/mods/client/ /tmp/client-files/mods/ || true
-          rsync -a --info=progress2 ./src/core/mods/common/ /tmp/client-files/mods/ || true
-          rsync -a --info=progress2 ./src/core/mods/server/ /tmp/server-files/mods/ || true
-          rsync -a --info=progress2 ./src/core/mods/common/ /tmp/server-files/mods/ || true
+            rsync -a ./src/core/mods/client/ /tmp/client-files/mods/ || true
+            rsync -a ./src/core/mods/common/ /tmp/client-files/mods/ || true
 
-          rsync -a --info=progress2 ./src/core/config/client/ /tmp/client-files/config/ || true
-          rsync -a --info=progress2 ./src/core/config/common/ /tmp/client-files/config/ || true
-          rsync -a --info=progress2 ./src/core/config/server/ /tmp/server-files/config/ || true
-          rsync -a --info=progress2 ./src/core/config/common/ /tmp/server-files/config/ || true
+            rsync -a ./src/core/config/client/ /tmp/client-files/config/ || true
+            rsync -a ./src/core/config/common/ /tmp/client-files/config/ || true
 
-          rsync -a --info=progress2 ./src/core/kubejs/client/ /tmp/client-files/kubejs/ || true
-          rsync -a --info=progress2 ./src/core/kubejs/common/ /tmp/client-files/kubejs/ || true
-          rsync -a --info=progress2 ./src/core/kubejs/server/ /tmp/server-files/kubejs/ || true
-          rsync -a --info=progress2 ./src/core/kubejs/common/ /tmp/server-files/kubejs/ || true
+            rsync -a ./src/core/kubejs/client/ /tmp/client-files/kubejs/ || true
+            rsync -a ./src/core/kubejs/common/ /tmp/client-files/kubejs/ || true
 
-          if [[ -f ./src/client/servers.dat ]]; then
-            cp ./src/client/servers.dat /tmp/client-files/servers.dat
+            if [[ -f ./src/client/servers.dat ]]; then
+              cp ./src/client/servers.dat /tmp/client-files/servers.dat
+            fi
+
+            if [[ ! -f ./src/client/profile.json ]]; then
+              echo "Missing ./src/client/profile.json"
+              exit 1
+            fi
+
+            cp ./src/client/profile.json /tmp/profile.json
           fi
 
-          if [[ ! -f ./src/client/profile.json ]]; then
-            echo "Missing ./src/client/profile.json"
-            exit 1
+          if [[ "$SERVER_CHANGED" == "true" ]]; then
+            mkdir -p /tmp/server-files/mods
+            mkdir -p /tmp/server-files/config
+            mkdir -p /tmp/server-files/kubejs
+
+            rsync -a ./src/core/mods/server/ /tmp/server-files/mods/ || true
+            rsync -a ./src/core/mods/common/ /tmp/server-files/mods/ || true
+
+            rsync -a ./src/core/config/server/ /tmp/server-files/config/ || true
+            rsync -a ./src/core/config/common/ /tmp/server-files/config/ || true
+
+            rsync -a ./src/core/kubejs/server/ /tmp/server-files/kubejs/ || true
+            rsync -a ./src/core/kubejs/common/ /tmp/server-files/kubejs/ || true
           fi
-
-          cp ./src/client/profile.json /tmp/profile.json
-
-          echo "Client files:"
-          find /tmp/client-files -type f | wc -l
-          du -sh /tmp/client-files
-
-          echo "Server files:"
-          find /tmp/server-files -type f | wc -l
-          du -sh /tmp/server-files
 
       - name: Upload server files via SFTP
+        if: steps.changes.outputs.server == 'true'
         env:
           SFTP_HOST: ${{ secrets.SERVER_HOST || secrets.IP }}
           SFTP_PORT: ${{ secrets.SERVER_PORT || secrets.PORT }}
@@ -143,76 +207,33 @@ jobs:
             REMOTE_KUBEJS="$SFTP_ROOT/kubejs"
           fi
 
-          upload_dir() {
-            local name="$1"
-            local src="$2"
-            local dst="$3"
-            local mode="$4"
-
-            echo "::group::Upload $name"
-            echo "Local path: $src"
-            echo "Remote path: $dst"
-            echo "Files:"
-            find "$src" -type f | wc -l
-            echo "Size:"
-            du -sh "$src"
-
-            if [[ "$mode" == "delete" ]]; then
-              timeout 30m lftp -u "$SFTP_USER","$SFTP_PASS" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF &
+          timeout 30m lftp -u "$SFTP_USER","$SFTP_PASS" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
           set sftp:auto-confirm yes
           set net:max-retries 2
           set net:timeout 30
           set net:reconnect-interval-base 5
           set cmd:fail-exit yes
           set cmd:show-status yes
-          mirror -R --delete --verbose=3 --parallel=4 "$src" "$dst"
+          mirror -R --delete --parallel=12 /tmp/server-files/mods "$REMOTE_MODS"
+          mirror -R --parallel=12 /tmp/server-files/config "$REMOTE_CONFIG"
+          mirror -R --delete --parallel=12 /tmp/server-files/kubejs "$REMOTE_KUBEJS"
           bye
           EOF
-            else
-              timeout 30m lftp -u "$SFTP_USER","$SFTP_PASS" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF &
-          set sftp:auto-confirm yes
-          set net:max-retries 2
-          set net:timeout 30
-          set net:reconnect-interval-base 5
-          set cmd:fail-exit yes
-          set cmd:show-status yes
-          mirror -R --verbose=3 --parallel=4 "$src" "$dst"
-          bye
-          EOF
-            fi
-
-            local pid=$!
-
-            while kill -0 "$pid" 2>/dev/null; do
-              echo "Uploading $name... $(date -u +%H:%M:%S)"
-              sleep 10
-            done
-
-            wait "$pid"
-            echo "Uploaded $name"
-            echo "::endgroup::"
-          }
-
-          upload_dir "mods" "/tmp/server-files/mods" "$REMOTE_MODS" "delete"
-          upload_dir "config" "/tmp/server-files/config" "$REMOTE_CONFIG" "merge"
-          upload_dir "kubejs" "/tmp/server-files/kubejs" "$REMOTE_KUBEJS" "delete"
 
       - name: Pack client files
+        if: steps.changes.outputs.client == 'true'
         run: |
           set -euo pipefail
           cd /tmp/client-files
-          echo "Packing client.zip"
-          find . -type f | wc -l
-          du -sh .
-          zip -r /tmp/client.zip .
-          echo "Archive size:"
-          du -sh /tmp/client.zip
+          zip -qr /tmp/client.zip .
 
       - name: Create release tag
+        if: steps.changes.outputs.client == 'true'
         id: release_tag
         run: echo "tag_name=client-main-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release and upload files
+        if: steps.changes.outputs.client == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_tag.outputs.tag_name }}
@@ -220,6 +241,6 @@ jobs:
           files: |
             /tmp/client.zip
             /tmp/profile.json
-          generate_release_notes: true
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
