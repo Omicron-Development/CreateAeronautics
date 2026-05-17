@@ -1,0 +1,50 @@
+{
+  "profile_format": 1,
+  "id": "create-aeronautics",
+  "name": "Create Aeronautics",
+  "version": "1.0.0",
+  "update": {
+    "enabled": true,
+    "asset": "client.zip",
+    "sha256": "",
+    "folders": [
+      {
+        "source": "mods",
+        "target": "mods",
+        "mode": "replace"
+      },
+      {
+        "source": "config",
+        "target": "config",
+        "mode": "merge"
+      }
+    ],
+    "files": [
+      {
+        "source": "servers.dat",
+        "target": "servers.dat",
+        "mode": "replace"
+      }
+    ]
+  },
+  "update_verify": {
+    "enabled": true,
+    "required": [
+      "mods",
+      "config",
+      "servers.dat"
+    ],
+    "files": [
+      {
+        "path": "servers.dat",
+        "sha256": "",
+        "size": null
+      }
+    ],
+    "manifest_asset": ""
+  },
+  "launch": {
+    "enabled": true,
+    "external": true
+  }
+}

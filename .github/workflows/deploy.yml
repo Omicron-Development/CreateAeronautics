@@ -29,6 +29,7 @@ jobs:
           rm -rf /tmp/client-files
           rm -rf /tmp/server-files
           rm -f /tmp/client.zip
+          rm -f /tmp/profile.json
 
       - name: Prepare files
         run: |
@@ -55,6 +56,17 @@ jobs:
           rsync -a --info=progress2 ./src/core/kubejs/common/ /tmp/client-files/kubejs/ || true
           rsync -a --info=progress2 ./src/core/kubejs/server/ /tmp/server-files/kubejs/ || true
           rsync -a --info=progress2 ./src/core/kubejs/common/ /tmp/server-files/kubejs/ || true
+
+          if [[ -f ./src/client/servers.dat ]]; then
+            cp ./src/client/servers.dat /tmp/client-files/servers.dat
+          fi
+
+          if [[ ! -f ./src/client/profile.json ]]; then
+            echo "Missing ./src/client/profile.json"
+            exit 1
+          fi
+
+          cp ./src/client/profile.json /tmp/profile.json
 
           echo "Client files:"
           find /tmp/client-files -type f | wc -l
@@ -192,7 +204,7 @@ jobs:
           echo "Packing client.zip"
           find . -type f | wc -l
           du -sh .
-          zip -r /tmp/client.zip mods config kubejs
+          zip -r /tmp/client.zip .
           echo "Archive size:"
           du -sh /tmp/client.zip
 
@@ -200,12 +212,14 @@ jobs:
         id: release_tag
         run: echo "tag_name=client-main-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release and upload archive
+      - name: Create GitHub Release and upload files
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_tag.outputs.tag_name }}
           name: Client Main ${{ steps.release_tag.outputs.tag_name }}
-          files: /tmp/client.zip
+          files: |
+            /tmp/client.zip
+            /tmp/profile.json
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
