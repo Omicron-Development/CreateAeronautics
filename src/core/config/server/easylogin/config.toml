@@ -1,0 +1,65 @@
+[general]
+loginTimeout = 90
+reminderInterval = 7
+enableLogout = true
+logoutCooldown = 60
+
+[limbo]
+enabled = false
+x = 0.5
+y = 120.0
+z = 0.5
+world = "minecraft:overworld"
+
+[security]
+bcryptCost = 12
+maxAttempts = 4
+attemptWindow = 10
+lockoutDuration = 15
+minPasswordLength = 6
+
+[protection]
+blockMovement = true
+blockChat = true
+blockDamageReceived = true
+blockDamageDealt = true
+invincibilityDuration = 7
+
+[sounds]
+loginSuccess = "minecraft:entity.player.levelup"
+loginFail = "minecraft:entity.villager.no"
+
+[messages]
+welcome = "&aДобро пожаловать, {player}! &7Войди: &e/login <пароль>"
+welcomeFirstTime = "&aДобро пожаловать, {player}! &7Зарегистрируйся: &e/register <пароль> <повтор_пароля>"
+loginSuccess = "&aТы успешно вошёл! Приятной игры, {player}!"
+registerSuccess = "&aАккаунт создан! Ты автоматически вошёл."
+wrongPassword = "&cНеверный пароль. Осталось попыток: {attempts}."
+alreadyLoggedIn = "&7Ты уже авторизован."
+notRegistered = "&cТы ещё не зарегистрирован. Используй: &e/register <пароль> <повтор_пароля>"
+alreadyRegistered = "&cТы уже зарегистрирован. Используй: &e/login <пароль>"
+kicked = "&cТы слишком долго не входил. Перезайди и попробуй снова."
+rateLimited = "&cСлишком много неверных попыток. Попробуй через {minutes} мин."
+passwordChanged = "&aПароль успешно изменён!"
+passwordMismatch = "&cПароли не совпадают. Попробуй снова."
+wrongOldPassword = "&cСтарый пароль введён неверно."
+logoutSuccess = "&7Ты вышел из аккаунта."
+logoutCooldown = "&cПодожди {seconds} сек. перед выходом из аккаунта."
+actionBarReminder = "&eВойди в аккаунт: /login <пароль>"
+actionBarReminderNew = "&eСоздай аккаунт: /register <пароль> <повтор_пароля>"
+blocked = "&cСначала нужно авторизоваться!"
+loginUsage = "&7Использование: &e/login <пароль>"
+registerUsage = "&7Использование: &e/register <пароль> <повтор_пароля>"
+changePasswordUsage = "&7Использование: &e/changepassword <старый> <новый> <повтор_нового>"
+adminForceLogin = "&aИгрок {player} принудительно авторизован."
+adminForceRegister = "&aИгрок {player} принудительно зарегистрирован с временным паролем."
+adminResetPassword = "&aПароль игрока {player} сброшен. Ему нужно зарегистрироваться заново."
+adminPurge = "&aАккаунт игрока {player} удалён."
+adminReload = "&aКонфигурация перезагружена."
+adminPlayerNotFound = "&cИгрок {player} не найден."
+adminNotRegistered = "&cИгрок {player} не зарегистрирован."
+minPasswordLength = "&cПароль должен быть минимум {min} символов."
+
+[server]
+name = "Minecraft Server"
+discord = ""
