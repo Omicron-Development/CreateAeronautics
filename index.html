@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Гайд по установке сборки | OmiDev</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --accent-color: #58a6ff;
+            --accent-glow: rgba(88, 166, 255, 0.2);
+            --btn-bg: #238636;
+            --btn-hover: #2ea043;
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            --important-bg: rgba(240, 136, 62, 0.1);
+            --important-border: #f0883e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #58a6ff, #bc8cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid #30363d;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 15px;
+        }
+
+        .step {
+            margin-bottom: 25px;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .step-title span {
+            color: var(--accent-color);
+        }
+
+        .step ul {
+            list-style: none;
+            padding-left: 15px;
+        }
+
+        .step ul li {
+            color: var(--text-muted);
+            position: relative;
+            margin-bottom: 6px;
+        }
+
+        .step ul li::before {
+            content: "•";
+            color: var(--accent-color);
+            position: absolute;
+            left: -15px;
+            font-weight: bold;
+        }
+
+        /* Стили кнопки */
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--btn-bg);
+            color: #fff;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            margin: 15px 0 5px 15px;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px 12px rgba(35, 134, 54, 0.3);
+        }
+
+        .download-btn:hover {
+            background-color: var(--btn-hover);
+            transform: translateY(-1px);
+        }
+
+        .download-btn:active {
+            transform: translateY(1px);
+        }
+
+        .important-box {
+            background-color: var(--important-bg);
+            border-left: 4px solid var(--important-border);
+            padding: 15px 20px;
+            border-radius: 4px 12px 12px 4px;
+            margin-top: 20px;
+        }
+
+        .important-box strong {
+            color: var(--important-border);
+            display: block;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .important-box p {
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        .mention-badge {
+            background: #21262d;
+            border: 1px solid #30363d;
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: #ff79c6;
+            font-family: monospace;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-top: 5px;
+            margin-right: 5px;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Блок 1: Инструкция -->
+    <div class="card">
+        <h2>🚀 Гайд: как скачать сборку и зайти в игру</h2>
+
+        <div class="step">
+            <div class="step-title"><span>1.</span> Скачайте файл</div>
+            <ul>
+                <li>Нажмите на зеленую кнопку ниже, чтобы загрузить установщик, и запустите его.</li>
+            </ul>
+            <!-- Атрибут download заставляет браузер именно скачивать файл, а не открывать его -->
+            <a href="https://raw.githubusercontent.com/Omicron-Development/CreateAeronautics/main/launcher/OmicronLauncher.exe"
+               onclick="forceDownload(event, this.href, 'MouseTweaks.cfg')"
+               class="download-btn">
+                📥 Скачать установщик (.exe)
+            </a>
+        </div>
+
+        <div class="step">
+            <div class="step-title"><span>2.</span> Выберите лаунчер и папку профиля</div>
+            <p style="color: var(--text-muted); margin-bottom: 8px;">В программе выберите:</p>
+            <ul>
+                <li>.exe файл вашего лаунчера, через который будете играть</li>
+                <li>папку профиля, куда будет установлена сборка: моды, конфиги и т.д.</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <div class="step-title"><span>3.</span> Нажмите «Обновить и запустить»</div>
+            <p style="color: var(--text-muted); margin-bottom: 8px;">Дальше программа всё сделает сама:</p>
+            <ul>
+                <li>если есть обновление — оно будет скачано, после чего запустится ваш лаунчер</li>
+                <li>если обновлений нет — просто запустится лаунчер</li>
+            </ul>
+            <p style="color: var(--text-muted); margin-top: 8px;">После этого запускайте игру как обычно.</p>
+        </div>
+
+        <div class="important-box">
+            <strong>Важно</strong>
+            <p>Адрес сервера будет автоматически добавлен в список серверов.</p>
+        </div>
+    </div>
+
+    <!-- Блок 2: Проблемы -->
+    <div class="card">
+        <h2>⚠️ Баг-репорты и проблемы</h2>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+            Если у вас появились баги, ошибки или любые другие проблемы при установке сборки, запуске лаунчера, входе на сервер или уже во время игры — пишите в этот чат.
+        </p>
+
+        <div class="step">
+            <div class="step-title" style="font-size: 1rem;">В сообщении желательно указать:</div>
+            <ul>
+                <li>что именно произошло</li>
+                <li>на каком этапе появилась проблема</li>
+                <li>приложить скриншот или видео, если есть возможность</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 20px; border-top: 1px solid #30363d; padding-top: 15px;">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 5px;">Телеграм для помощи:</p>
+            <span class="mention-badge">@omi_dev</span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    async function forceDownload(event, url, filename) {
+        event.preventDefault();
+
+        const response = await fetch(url);
+        const blob = await response.blob();
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+
+        document.body.appendChild(link);
+        link.click();
+
+        URL.revokeObjectURL(link.href);
+        link.remove();
+    }
+</script>
+</body>
+</html>
